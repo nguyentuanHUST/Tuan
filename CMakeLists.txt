@@ -6,9 +6,9 @@ find_package(Boost COMPONENTS system REQUIRED)
 # enable_testing()
 
 include_directories ("${PROJECT_SOURCE_DIR}")
-add_executable(Tuan server.cpp Protocol.cpp)
+add_executable(server server.cpp Protocol.cpp Socket.cpp)
 
-target_link_libraries(Tuan ${Boost_LIBRARIES} ${EXTRA_LIBS})
+target_link_libraries(server ${Boost_LIBRARIES} ${EXTRA_LIBS})
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

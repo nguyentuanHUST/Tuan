@@ -73,7 +73,7 @@ class Client
     {
         mSocket.async_receive(boost::asio::buffer(pBufReceive.get(),20), boost::bind(&Client::onReceive,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));
     }
-    static const uint64_t max_size = 100*1024*1024;
+    static const uint64_t max_size = 1000;
     io_service mService;
     ip::tcp::socket mSocket{mService};
     std::unique_ptr<uint8_t[]> pData;
@@ -88,6 +88,5 @@ int main(int argc, char** argv)
 {
     Client client;
     client.start();
-    while(1){}
     return 0;
 }
