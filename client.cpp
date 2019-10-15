@@ -3,6 +3,8 @@
 #include <memory>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
+#include "Protocol.h"
+#include <stdio.h>
 using namespace boost::asio;
 using namespace boost::posix_time;
 
@@ -11,14 +13,19 @@ class Client
 {
     public:
     Client(){
-        std::cout<<"Constructor\n";
         pData = std::make_unique<uint8_t[]>(max_size);
         pBufReceive = std::make_unique<uint8_t[]>(max_size);
     }
     void onReceive(boost::system::error_code error, std::size_t bytes_transferred) 
     {
+        std::cout << "Byte received: "<<bytes_transferred<<std::endl;
         if(!error){
-            std::cout<< pBufReceive.get() << " ack length: " << bytes_transferred<< std::endl;
+            uint8_t* pData = pBufReceive.get();
+            Header header;
+            std::memcpy(&header, pData, sizeof(Header));
+            Message msg{header, pData + sizeof(Header)};
+            msg.setBCC(*(pData + sizeof(Header) + header.dataLength));
+            msg.display();
             clientReceive();
         } else {
             std::cout<<"Error "<<error.message()<<std::endl;
@@ -39,8 +46,8 @@ class Client
         if(!error){
             std::cout<<"Send " << bytes_transferred << std::endl;
             // boost::this_thread::sleep(boost::posix_time::millisec(1000));
-            sleep(1);
-            clientSend();
+            // sleep(1);
+            // clientSend();
         } else {
             std::cout<<"Error "<<error.message()<<std::endl;
         }
@@ -51,17 +58,21 @@ class Client
         ::ip::tcp::endpoint ep(::ip::address::from_string("127.0.0.1"), 6969);
         mSocket.async_connect(ep, [this](...) {
             std::cout<<"Connected\n";
-            clientSend();
             clientReceive();
         });
+    }
+
+    void send(const char* data, const uint16_t length)
+    {
+        mSocket.async_send(boost::asio::buffer(data,length), boost::bind(&Client::onSend,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));
+        reqTime = microsec_clock::local_time();
+        std::cout<< "Send timestamp(ms): "<<reqTime.time_of_day().total_milliseconds()<<std::endl;
+    }
+
+    void startIO()
+    {
         mService.run();
     }
-
-    void send(const uint8_t* data, const uint16_t length)
-    {
-
-    }
-
     private:
     void clientSend()
     {
@@ -71,9 +82,9 @@ class Client
     }
     void clientReceive(const uint64_t size = Client::max_size)
     {
-        mSocket.async_receive(boost::asio::buffer(pBufReceive.get(),20), boost::bind(&Client::onReceive,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));
+        mSocket.async_receive(boost::asio::buffer(pBufReceive.get(),max_size), boost::bind(&Client::onReceive,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));
     }
-    static const uint64_t max_size = 1000;
+    static const uint64_t max_size = 65600;
     io_service mService;
     ip::tcp::socket mSocket{mService};
     std::unique_ptr<uint8_t[]> pData;
@@ -88,5 +99,22 @@ int main(int argc, char** argv)
 {
     Client client;
     client.start();
+    Header header;//{"##", 0x01, 0xFE, "0123456789ABCDE", 0x01, 0};
+    header.startCharacter[0] = '#';
+    header.startCharacter[1] = '#';
+    header.commandMark = 0x01;
+    header.responseSign = 0xFE;
+    const char* vin = "0123456789ABCDEF";
+    memcpy(header.vin, vin, 17);
+    header.encrypType = 0x01;
+    header.dataLength = 0;
+    Message msg;
+    msg.setHeader(header);
+    (void)msg.calBCC();
+    msg.display();
+    std::unique_ptr<uint8_t[]> ptr = msg.deserialize();
+    char* s = reinterpret_cast<char *>(ptr.get());
+    client.send(s, msg.getMessageLength());
+    client.startIO();
     return 0;
 }

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <bitset>
+#include <cstring>
 Message::Message()
 {
 }
@@ -17,7 +18,7 @@ void Message::setHeader(const Header header)
 {
     mHeader = header;
 }
-Header Message::getHeader()
+Header& Message::getHeader()
 {
     return mHeader;
 }
@@ -35,6 +36,7 @@ uint8_t Message::calBCC()
     for(auto &i:data) {
         temp ^= i;
     }
+    mBCC = temp;
     return temp;
 }
 void Message::setBCC(const uint8_t bcc)
@@ -47,12 +49,12 @@ bool Message::verify()
 }
 void Message::display()
 {
-    std::cout << "Start character: " << mHeader.startCharacter << std::endl;
-    std::cout << "Command Mark: " << std::hex << mHeader.commandMark << std::endl;
-    std::cout << "Response Sign: " << std::hex << mHeader.responseSign << std::endl;
-    std::cout << "VIN: " <<mHeader.vin << std::endl;
-    std::cout << "Encrypt type: "<<std::hex<<mHeader.encrypType << std::endl;
-    std::cout << "Data length: " << std::hex << mHeader.dataLength <<std::endl;
+    std::cout << "Start character: " << mHeader.startCharacter[0] << mHeader.startCharacter[1] << std::endl;
+    std::cout << "Command Mark: " << std::hex <<(uint16_t)mHeader.commandMark << std::endl;
+    std::cout << "Response Sign: " << std::hex << (uint16_t)mHeader.responseSign << std::endl;
+    std::cout << "VIN: " << mHeader.vin << std::endl;
+    std::cout << "Encrypt type: "<< std::hex << (uint16_t)mHeader.encrypType << std::endl;
+    std::cout << "Data length: " << mHeader.dataLength <<std::endl;
     std::cout << "Data: ";
     for(auto &i:data) {
         std::cout << i;
@@ -62,15 +64,31 @@ void Message::display()
 void Message::print(const char* path)
 {
     std::ofstream out(path);
-    out << "Start character: " << mHeader.startCharacter << std::endl;
-    out << "Command Mark: " << std::hex << mHeader.commandMark << std::endl;
-    out << "Response Sign: " << std::hex << mHeader.responseSign << std::endl;
+    out << "Start character: " << mHeader.startCharacter[0] << mHeader.startCharacter[1] << std::endl;
+    out << "Command Mark: " << std::hex << (uint16_t)mHeader.commandMark << std::endl;
+    out << "Response Sign: " << std::hex << (uint16_t)mHeader.responseSign << std::endl;
     out << "VIN: " <<mHeader.vin << std::endl;
-    out << "Encrypt type: "<<std::hex<<mHeader.encrypType << std::endl;
+    out << "Encrypt type: "<<std::hex<<(uint16_t)mHeader.encrypType << std::endl;
     out << "Data length: " << std::hex << mHeader.dataLength <<std::endl;
     out << "Data: ";
     for(auto &i:data) {
         out << i;
     }
     out << std::endl << "BCC: " << std::bitset<8>(mBCC)<<std::endl;
+}
+std::unique_ptr<uint8_t[]> Message::deserialize() {
+    const uint16_t headerLen = sizeof(Header);
+    const uint8_t bccLen = 1;
+    std::unique_ptr<uint8_t[]> p = std::make_unique<uint8_t[]>(headerLen + mHeader.dataLength + bccLen);
+    uint8_t* delegateP = p.get();
+    std::memcpy(delegateP, &mHeader, headerLen);
+    delegateP += headerLen;
+    std::memcpy(delegateP, &data[0], mHeader.dataLength);
+    delegateP += mHeader.dataLength;
+    std::memcpy(delegateP, &mBCC, bccLen);
+    return p;
+}
+
+uint32_t Message::getMessageLength() {
+    return sizeof(Header) + mHeader.dataLength + 1;
 }

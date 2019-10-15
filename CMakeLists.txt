@@ -7,8 +7,9 @@ find_package(Boost COMPONENTS system REQUIRED)
 
 include_directories ("${PROJECT_SOURCE_DIR}")
 add_executable(server server.cpp Protocol.cpp Socket.cpp)
-
 target_link_libraries(server ${Boost_LIBRARIES} ${EXTRA_LIBS})
+add_executable(client client.cpp Protocol.cpp)
+target_link_libraries(client ${Boost_LIBRARIES} ${EXTRA_LIBS})
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

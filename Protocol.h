@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
 #include <vector>
+#include <memory>
+
 typedef struct Header
 {
     unsigned char startCharacter[2];
@@ -21,11 +23,13 @@ class Message
     Message(Header mHeader, const uint8_t* pBuf);
     ~Message();
     void setHeader(const Header header);
-    Header getHeader();
+    Header& getHeader();
     void setData(const uint8_t* pBuf);
     uint8_t calBCC();
     void setBCC(const uint8_t bcc);
     bool verify();
     void display();
     void print(const char* path);
+    std::unique_ptr<uint8_t[]> deserialize();
+    uint32_t getMessageLength();
 };
