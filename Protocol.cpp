@@ -56,14 +56,16 @@ void Message::display()
     std::cout << "Encrypt type: "<< std::hex << (uint16_t)mHeader.encrypType << std::endl;
     std::cout << "Data length: " << mHeader.dataLength <<std::endl;
     std::cout << "Data: ";
-    for(auto &i:data) {
-        std::cout << i;
+    if(mHeader.commandMark == 0x02 | mHeader.commandMark == 0x03) {
+        for(auto &i:data) {
+            std::cout << i;
+        }
     }
     std::cout << std::endl << "BCC: " << std::bitset<8>(mBCC)<<std::endl;
 }
 void Message::print(const char* path)
 {
-    std::ofstream out(path);
+    std::ofstream out(path, std::ios_base::app);
     out << "Start character: " << mHeader.startCharacter[0] << mHeader.startCharacter[1] << std::endl;
     out << "Command Mark: " << std::hex << (uint16_t)mHeader.commandMark << std::endl;
     out << "Response Sign: " << std::hex << (uint16_t)mHeader.responseSign << std::endl;
@@ -71,8 +73,10 @@ void Message::print(const char* path)
     out << "Encrypt type: "<<std::hex<<(uint16_t)mHeader.encrypType << std::endl;
     out << "Data length: " << std::hex << mHeader.dataLength <<std::endl;
     out << "Data: ";
-    for(auto &i:data) {
-        out << i;
+    if(mHeader.commandMark == 0x02 | mHeader.commandMark == 0x03) {
+        for(auto &i:data) {
+            std::cout << i;
+        }
     }
     out << std::endl << "BCC: " << std::bitset<8>(mBCC)<<std::endl;
 }

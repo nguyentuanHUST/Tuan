@@ -58,25 +58,30 @@ void Server::myCommHandler::onReceive(uint8_t* pData, uint32_t len, int id)
         Message msg{header, pData + sizeof(Header)};
         msg.setBCC(*(pData + sizeof(Header) + header.dataLength));
         msg.display();
+        msg.print("Receive.txt");
         if(msg.verify()) {
             switch(msg.getHeader().commandMark) {
                 case 0x01: 
                     std::cout << "0x01 msg" << std::endl;
                     msg.getHeader().responseSign = 0x01;
                     msg.calBCC();
-                    {
-                    std::unique_ptr<uint8_t[]> ptr = msg.deserialize();
-                    char* s = reinterpret_cast<char *>(ptr.get());
-                    socket->async_send(boost::asio::mutable_buffer(s, msg.getMessageLength()));
-                    std::cout << msg.getMessageLength() << sizeof(Header) << std::endl;
-                    msg.display();
-                    }
+                    msg.print("Send.txt");
+                    socket->async_send(boost::asio::buffer(msg.deserialize().get(), msg.getMessageLength()));
+                    break;
+                case 0x02: 
+                    std::cout << "0x02 msg" << std::endl;
+                    break;
+                case 0x03: 
+                    std::cout << "0x03 msg" << std::endl;
                     break;
                 case 0x04: 
                     std::cout << "0x04 msg" << std::endl;
                     break;
                 case 0x07: 
                     std::cout << "0x07 msg" << std::endl;
+                    msg.getHeader().responseSign = 0x01;
+                    msg.calBCC();
+                    socket->async_send(boost::asio::buffer(msg.deserialize().get(), msg.getMessageLength()));
                     break;
                 default:
                     std::cout << "Not identify" << std::endl;
@@ -95,7 +100,12 @@ void Server::myCommHandler::onSend(bool result, int id)
 }
 void Server::myCommHandler::onDisconnected(int id)
 {
-
+    auto it = mApp.mSockets.find(id);
+    if(it != mApp.mSockets.end()) {
+        std::cout<<"Session disconnected"<<std::endl;
+    } else {
+        std::cout<<"Not a valid session"<<std::endl;
+    }
 }
 int main(int argc, char** argv)
 {

@@ -21,6 +21,7 @@ private:
     static const uint32_t maxsize = 65535;
     io_service& mService;
     ip::tcp::socket mSocket;
+    std::unique_ptr<uint8_t[]> pBufSend;
     std::unique_ptr<uint8_t[]> pBufReceive;
     uint64_t size;
     std::shared_ptr<ICommHandler> mCommHandler;
