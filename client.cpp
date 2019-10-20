@@ -20,12 +20,14 @@ class Client
     {
         std::cout << "Byte received: "<<bytes_transferred<<std::endl;
         if(!error){
-            uint8_t* pData = pBufReceive.get();
-            Header header;
-            std::memcpy(&header, pData, sizeof(Header));
-            Message msg{header, pData + sizeof(Header)};
-            msg.setBCC(*(pData + sizeof(Header) + header.dataLength));
+            Message msg;
+            msg.serialize(pBufReceive.get(), bytes_transferred);
             msg.display();
+            if(msg.verify()) {
+                std::cout  << "Verify response success" << std::endl;
+            } else {
+                std::cout  << "Verify fail" << std::endl;
+            }
             clientReceive();
         } else {
             std::cout<<"Error "<<error.message()<<std::endl;
@@ -107,9 +109,11 @@ int main(int argc, char** argv)
     const char* vin = "0123456789ABCDEF";
     memcpy(header.vin, vin, 17);
     header.encrypType = 0x01;
-    header.dataLength = 0;
+    header.dataLength = 5;
     Message msg;
     msg.setHeader(header);
+    char* c = "abcde";
+    msg.setData(reinterpret_cast<uint8_t *>(c));
     (void)msg.calBCC();
     msg.display();
     std::unique_ptr<uint8_t[]> ptr = msg.deserialize();

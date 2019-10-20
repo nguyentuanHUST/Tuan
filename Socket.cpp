@@ -56,7 +56,7 @@ void Socket::onReceive(boost::system::error_code error, std::size_t bytes_transf
 }
 
 void Socket::onSend(boost::system::error_code error, std::size_t bytes_transferred) {
-    std::cout << "Byte sent: "<<bytes_transferred<<std::endl;
+    std::cout << "Byte sent: "<<std::dec <<bytes_transferred<<std::endl;
     if(!error) {
         mCommHandler->onSend(true, id);
     } else {

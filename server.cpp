@@ -1,5 +1,31 @@
 #include "server.h"
 #include "Socket.h"
+#include <stdio.h>
+#include <sys/select.h>
+#include <termios.h>
+#include <future>
+#include <thread>
+#include <chrono>
+// #include <stropts.h>
+
+int _kbhit() {
+    static const int STDIN = 0;
+    static bool initialized = false;
+
+    if (! initialized) {
+        // Use termios to turn off line buffering
+        termios term;
+        tcgetattr(STDIN, &term);
+        term.c_lflag &= ~ICANON;
+        tcsetattr(STDIN, TCSANOW, &term);
+        setbuf(stdin, NULL);
+        initialized = true;
+    }
+
+    int bytesWaiting;
+    ioctl(STDIN, FIONREAD, &bytesWaiting);
+    return bytesWaiting;
+}
 
 using namespace boost::asio;
 using namespace boost::posix_time;
@@ -8,9 +34,12 @@ int Server::socketID = 1;
 Server::Server():mAcceptor(mService, ip::tcp::endpoint(ip::tcp::v4(), 6969)){
     pData = std::make_unique<uint8_t[]>(100);
     pBufReceive = std::make_unique<uint8_t[]>(max_size);
+    mode = 0;
 }
 void Server::ack(){
-
+    std::cout << "Respond client id: " << response.id<<std::endl;
+    response.msg.print("Send.txt");
+    mSockets.find(response.id) ->second->async_send(boost::asio::buffer(response.msg.deserialize().get(), response.msg.getMessageLength()));
 }
 
 void Server::start()
@@ -48,15 +77,19 @@ void Server::stop()
     std::cout<<"Server stop\n";
 }
 
+void Server::setMode(int m)
+{
+    mode = m;
+}
+
 void Server::myCommHandler::onReceive(uint8_t* pData, uint32_t len, int id)
 {
     std::lock_guard<std::mutex> lock(mApp.lockHandler);
     ISocket* socket = mApp.mSockets.find(id)->second.get();
     Header header;
     try{
-        std::memcpy(&header, pData, sizeof(Header));
-        Message msg{header, pData + sizeof(Header)};
-        msg.setBCC(*(pData + sizeof(Header) + header.dataLength));
+        Message msg;
+        msg.serialize(pData, len);
         msg.display();
         msg.print("Receive.txt");
         if(msg.verify()) {
@@ -65,8 +98,12 @@ void Server::myCommHandler::onReceive(uint8_t* pData, uint32_t len, int id)
                     std::cout << "0x01 msg" << std::endl;
                     msg.getHeader().responseSign = 0x01;
                     msg.calBCC();
-                    msg.print("Send.txt");
-                    socket->async_send(boost::asio::buffer(msg.deserialize().get(), msg.getMessageLength()));
+                    if(mApp.mode == 0) {
+                        msg.print("Send.txt");
+                        socket->async_send(boost::asio::buffer(msg.deserialize().get(), msg.getMessageLength()));
+                    } else if (mApp.mode == 1) {
+                        mApp.response = Response{id,msg};
+                    }
                     break;
                 case 0x02: 
                     std::cout << "0x02 msg" << std::endl;
@@ -79,9 +116,12 @@ void Server::myCommHandler::onReceive(uint8_t* pData, uint32_t len, int id)
                     break;
                 case 0x07: 
                     std::cout << "0x07 msg" << std::endl;
-                    msg.getHeader().responseSign = 0x01;
-                    msg.calBCC();
-                    socket->async_send(boost::asio::buffer(msg.deserialize().get(), msg.getMessageLength()));
+                    if(mApp.mode == 0) {
+                        msg.print("Send.txt");
+                        socket->async_send(boost::asio::buffer(msg.deserialize().get(), msg.getMessageLength()));
+                    } else if (mApp.mode == 1) {
+                        mApp.response = Response{id,msg};
+                    }
                     break;
                 default:
                     std::cout << "Not identify" << std::endl;
@@ -110,7 +150,23 @@ void Server::myCommHandler::onDisconnected(int id)
 int main(int argc, char** argv)
 {
     Server server;
+    std::future<void> f;
+    if(argc > 1) {
+        server.setMode(std::atoi(argv[1]));
+        f = std::async(std::launch::async, [&server](){
+            while (true) {
+                if(_kbhit()) {
+                    char key = getchar();
+                    if(key == 's') {
+                        server.ack();
+                    }
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+        });
+    }
     server.start();
     server.runIO();
+    f.get();
     return 0;
 }

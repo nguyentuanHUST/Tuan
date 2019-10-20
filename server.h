@@ -19,6 +19,7 @@ class Server
     void onAccept(const boost::system::error_code& error);
     void runIO();
     void stop();
+    void setMode(int mode);
     private:
     class myCommHandler : public ICommHandler
     {
@@ -40,4 +41,9 @@ class Server
     uint16_t nPacket{0};
     std::shared_ptr<myCommHandler> mCommHandler;
     std::mutex lockHandler;
+    int mode;
+    struct Response {
+        int id;
+        Message msg;
+    } response;
 };

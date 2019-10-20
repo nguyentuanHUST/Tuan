@@ -32,4 +32,5 @@ class Message
     void print(const char* path);
     std::unique_ptr<uint8_t[]> deserialize();
     uint32_t getMessageLength();
+    void serialize(uint8_t* pData, uint32_t len);
 };
