@@ -13,7 +13,8 @@ Socket::~Socket() {
 
 void Socket::async_receive(uint32_t len) {
     size = len;
-    mSocket.async_receive(boost::asio::buffer(pBufReceive.get(),len), boost::bind(&onReceive,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));  
+    // mSocket.async_receive(boost::asio::buffer(pBufReceive.get(),len), boost::bind(&onReceive,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));  
+    boost::asio::async_read_until(mSocket, pStreamBuf,"##",boost::bind(&onReadUntil,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));
 }
 
 void Socket::async_send(boost::asio::mutable_buffer mData) {
@@ -49,6 +50,17 @@ void Socket::onReceive(boost::system::error_code error, std::size_t bytes_transf
     if(!error) {
         mCommHandler->onReceive(pBufReceive.get(), bytes_transferred, id);
         mSocket.async_receive(boost::asio::buffer(pBufReceive.get(),size), boost::bind(&onReceive,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));  
+    } else {
+        std::cout << error.message() <<std::endl;
+        mCommHandler->onDisconnected(id);
+    }
+}
+
+void Socket::onReadUntil(const boost::system::error_code& error, std::size_t size) {
+    std::cout << "Byte received: "<<size<<std::endl;
+    if(!error) {
+        // mCommHandler->onReceive(pBufReceive.get(), bytes_transferred, id);
+        boost::asio::async_read_until(mSocket, pStreamBuf,"##",boost::bind(&onReadUntil,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));
     } else {
         std::cout << error.message() <<std::endl;
         mCommHandler->onDisconnected(id);

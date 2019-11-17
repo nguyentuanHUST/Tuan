@@ -17,6 +17,7 @@ public:
 private:
     void onReceive(boost::system::error_code error, std::size_t bytes_transferred);
     void onSend(boost::system::error_code error, std::size_t bytes_transferred);
+    void onReadUntil(const boost::system::error_code& e, std::size_t size);
 private:
     static const uint32_t maxsize = 65535;
     io_service& mService;
@@ -26,5 +27,6 @@ private:
     uint64_t size;
     std::shared_ptr<ICommHandler> mCommHandler;
     int id;
+    boost::asio::streambuf pStreamBuf;
 };
 

@@ -1,15 +1,16 @@
 cmake_minimum_required(VERSION 3.0.0)
-project(Tuan VERSION 0.1.0)
-
-find_package(Boost COMPONENTS system REQUIRED)
+set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 # include(CTest)
 # enable_testing()
-
+find_package(Boost COMPONENTS system REQUIRED)
+find_package(OpenSSL REQUIRED)
 include_directories ("${PROJECT_SOURCE_DIR}")
-add_executable(server server.cpp Protocol.cpp Socket.cpp)
-target_link_libraries(server ${Boost_LIBRARIES} ${EXTRA_LIBS})
+add_executable(server server.cpp Protocol.cpp Socket.cpp SSLSocket.cpp)
+target_link_libraries(server ${OPENSSL_LIBRARIES} ${Boost_LIBRARIES} ${EXTRA_LIBS})
 add_executable(client client.cpp Protocol.cpp)
-target_link_libraries(client ${Boost_LIBRARIES} ${EXTRA_LIBS})
+target_link_libraries(client ${OPENSSL_LIBRARIES} ${Boost_LIBRARIES}  ${EXTRA_LIBS} )
+add_executable(client_tls client_tls.cpp Protocol.cpp)
+target_link_libraries(client_tls ${OPENSSL_LIBRARIES} ${Boost_LIBRARIES}  ${EXTRA_LIBS} )
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

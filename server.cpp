@@ -6,6 +6,7 @@
 #include <future>
 #include <thread>
 #include <chrono>
+#include "SSLSocket.h"
 // #include <stropts.h>
 
 int _kbhit() {
@@ -31,10 +32,20 @@ using namespace boost::asio;
 using namespace boost::posix_time;
 
 int Server::socketID = 1;
-Server::Server():mAcceptor(mService, ip::tcp::endpoint(ip::tcp::v4(), 6969)){
+Server::Server():mAcceptor(mService, ip::tcp::endpoint(ip::tcp::v4(), 8890)),
+mSSLAcceptor(mService, ip::tcp::endpoint(ip::tcp::v4(), 8891)),
+mContext(boost::asio::ssl::context::sslv23) {
     pData = std::make_unique<uint8_t[]>(100);
     pBufReceive = std::make_unique<uint8_t[]>(max_size);
     mode = 0;
+    mContext.set_options(
+    boost::asio::ssl::context::default_workarounds
+    | boost::asio::ssl::context::no_sslv2
+    | boost::asio::ssl::context::single_dh_use);
+    // mContext.set_password_callback(boost::bind(&server::get_password, this));
+    mContext.use_certificate_chain_file("certificate.pem");
+    mContext.use_private_key_file("key.pem", boost::asio::ssl::context::pem);
+    // mContext.use_tmp_dh_file("dh512.pem");
 }
 void Server::ack(){
     std::cout << "Respond client id: " << response.id<<std::endl;
@@ -51,6 +62,13 @@ void Server::start()
     pSocket->setID(socketID);
     mAcceptor.async_accept(pSocket->getSocket(), boost::bind(&onAccept, this, placeholders::error));
     mSockets.insert(std::pair<int, std::unique_ptr<ISocket>>(socketID, std::move(pSocket)));
+    socketID += 1;
+    std::unique_ptr<SSLSocket> pSSLSocket = std::make_unique<SSLSocket>(mService, mContext);
+    pSSLSocket->setCommHandler(mCommHandler.get());
+    pSSLSocket->setID(socketID);
+    mSSLAcceptor.async_accept(pSSLSocket->getSocket(), boost::bind(&onSSLAccept, this, placeholders::error));
+    mSockets.insert(std::pair<int, std::unique_ptr<ISocket>>(socketID, std::move(pSSLSocket)));
+
 }
 
 void Server::onAccept(const boost::system::error_code& error) 
@@ -64,6 +82,22 @@ void Server::onAccept(const boost::system::error_code& error)
         pSocket->setID(socketID);
         mAcceptor.async_accept(pSocket->getSocket(), boost::bind(&onAccept, this, placeholders::error));
         mSockets.insert(std::pair<int, std::unique_ptr<ISocket>>(socketID, std::move(pSocket)));
+    } else {
+        std::cout<<error.message()<<std::endl;
+    }
+}
+
+void Server::onSSLAccept(const boost::system::error_code& error) 
+{
+    if(!error){
+        auto it = mSockets.find(socketID)->second.get();
+        it->async_receive(max_size);
+        socketID += 1;
+        std::unique_ptr<SSLSocket> pSSLSocket = std::make_unique<SSLSocket>(mService, mContext);
+        pSSLSocket->setCommHandler(mCommHandler.get());
+        pSSLSocket->setID(socketID);
+        mSSLAcceptor.async_accept(pSSLSocket->getSocket(), boost::bind(&onSSLAccept, this, placeholders::error));
+        mSockets.insert(std::pair<int, std::unique_ptr<ISocket>>(socketID, std::move(pSSLSocket)));
     } else {
         std::cout<<error.message()<<std::endl;
     }

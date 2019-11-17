@@ -57,7 +57,7 @@ class Client
     void start()
     {
         std::cout<<"Client start\n";
-        ::ip::tcp::endpoint ep(::ip::address::from_string("127.0.0.1"), 6969);
+        ::ip::tcp::endpoint ep(::ip::address::from_string("127.0.0.1"), 8890);
         mSocket.async_connect(ep, [this](...) {
             std::cout<<"Connected\n";
             clientReceive();
@@ -118,6 +118,8 @@ int main(int argc, char** argv)
     msg.display();
     std::unique_ptr<uint8_t[]> ptr = msg.deserialize();
     char* s = reinterpret_cast<char *>(ptr.get());
+    client.send(s, msg.getMessageLength());
+    client.send(s, msg.getMessageLength());
     client.send(s, msg.getMessageLength());
     client.startIO();
     return 0;
