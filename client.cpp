@@ -119,8 +119,6 @@ int main(int argc, char** argv)
     std::unique_ptr<uint8_t[]> ptr = msg.deserialize();
     char* s = reinterpret_cast<char *>(ptr.get());
     client.send(s, msg.getMessageLength());
-    client.send(s, msg.getMessageLength());
-    client.send(s, msg.getMessageLength());
     client.startIO();
     return 0;
 }

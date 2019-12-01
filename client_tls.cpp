@@ -62,9 +62,12 @@ class Client
         mContext.load_verify_file("certificate.pem");
         mSocket.set_verify_mode(boost::asio::ssl::verify_peer);
         mSocket.set_verify_callback(boost::bind(&Client::verify_certificate, this, _1, _2));
-        ::ip::tcp::endpoint ep(::ip::address::from_string("127.0.0.1"), 8891);
-        mSocket.async_connect();
-        boost::asio::async_connect(mSocket.lowest_layer(),ep, [this](...) {
+        // ::ip::tcp::endpoint ep(::ip::address::from_string("127.0.0.1"), 8891);
+        // mSocket.async_connect();
+        boost::asio::ip::tcp::resolver resolver(mService);
+        boost::asio::ip::tcp::resolver::query query("localhost", "8891");
+        boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);
+        boost::asio::async_connect(mSocket.lowest_layer(), iterator, [this](...) {
             std::cout<<"Connected\n";
             this->mSocket.async_handshake(boost::asio::ssl::stream_base::client, [this](const boost::system::error_code& error){
                 if (!error)

@@ -57,6 +57,7 @@ void SSLSocket::onReceive(boost::system::error_code error, std::size_t bytes_tra
     }
 }
 void SSLSocket::onHandShake(boost::system::error_code error) {
+    std::cout<<"On Handshake callback\n";
     if(!error) {
         mSocket.async_read_some(boost::asio::buffer(pBufReceive.get(),size), boost::bind(&onReceive,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));
     } else {

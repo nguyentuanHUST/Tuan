@@ -35,6 +35,8 @@ class Server
     };
     static const int max_size = 65000;
     static int socketID;
+    int TCPAcceptorID;
+    int TLSAcceptorID;
     io_service mService;
     boost::asio::ssl::context mContext;
     ip::tcp::acceptor mAcceptor;

@@ -60,12 +60,14 @@ void Server::start()
     std::unique_ptr<Socket> pSocket = std::make_unique<Socket>(mService);
     pSocket->setCommHandler(mCommHandler.get());
     pSocket->setID(socketID);
+    TCPAcceptorID = socketID;
     mAcceptor.async_accept(pSocket->getSocket(), boost::bind(&onAccept, this, placeholders::error));
     mSockets.insert(std::pair<int, std::unique_ptr<ISocket>>(socketID, std::move(pSocket)));
     socketID += 1;
     std::unique_ptr<SSLSocket> pSSLSocket = std::make_unique<SSLSocket>(mService, mContext);
     pSSLSocket->setCommHandler(mCommHandler.get());
     pSSLSocket->setID(socketID);
+    TLSAcceptorID = socketID;
     mSSLAcceptor.async_accept(pSSLSocket->getSocket(), boost::bind(&onSSLAccept, this, placeholders::error));
     mSockets.insert(std::pair<int, std::unique_ptr<ISocket>>(socketID, std::move(pSSLSocket)));
 
@@ -74,12 +76,14 @@ void Server::start()
 void Server::onAccept(const boost::system::error_code& error) 
 {
     if(!error){
-        auto it = mSockets.find(socketID)->second.get();
+        std::cout<<"Accepted!\n";
+        auto it = mSockets.find(TCPAcceptorID)->second.get();
         it->async_receive(max_size);
         socketID += 1;
         std::unique_ptr<Socket> pSocket = std::make_unique<Socket>(mService);
         pSocket->setCommHandler(mCommHandler.get());
         pSocket->setID(socketID);
+        TCPAcceptorID = socketID;
         mAcceptor.async_accept(pSocket->getSocket(), boost::bind(&onAccept, this, placeholders::error));
         mSockets.insert(std::pair<int, std::unique_ptr<ISocket>>(socketID, std::move(pSocket)));
     } else {
@@ -90,12 +94,13 @@ void Server::onAccept(const boost::system::error_code& error)
 void Server::onSSLAccept(const boost::system::error_code& error) 
 {
     if(!error){
-        auto it = mSockets.find(socketID)->second.get();
+        auto it = mSockets.find(TLSAcceptorID)->second.get();
         it->async_receive(max_size);
         socketID += 1;
         std::unique_ptr<SSLSocket> pSSLSocket = std::make_unique<SSLSocket>(mService, mContext);
         pSSLSocket->setCommHandler(mCommHandler.get());
         pSSLSocket->setID(socketID);
+        TLSAcceptorID = socketID;
         mSSLAcceptor.async_accept(pSSLSocket->getSocket(), boost::bind(&onSSLAccept, this, placeholders::error));
         mSockets.insert(std::pair<int, std::unique_ptr<ISocket>>(socketID, std::move(pSSLSocket)));
     } else {
@@ -177,6 +182,7 @@ void Server::myCommHandler::onDisconnected(int id)
     auto it = mApp.mSockets.find(id);
     if(it != mApp.mSockets.end()) {
         std::cout<<"Session disconnected"<<std::endl;
+        // mApp.mSockets.erase(id);        
     } else {
         std::cout<<"Not a valid session"<<std::endl;
     }

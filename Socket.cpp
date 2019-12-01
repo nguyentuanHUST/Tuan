@@ -8,13 +8,13 @@ Socket::Socket(io_service& service):mService(service), mSocket(mService) {
     pBufSend = std::make_unique<uint8_t[]>(maxsize);
 }
 Socket::~Socket() {
-    
+    std::cout<<"Socket destructor\n";
 }
 
 void Socket::async_receive(uint32_t len) {
     size = len;
-    // mSocket.async_receive(boost::asio::buffer(pBufReceive.get(),len), boost::bind(&onReceive,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));  
-    boost::asio::async_read_until(mSocket, pStreamBuf,"##",boost::bind(&onReadUntil,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));
+    mSocket.async_receive(boost::asio::buffer(pBufReceive.get(),len), boost::bind(&onReceive,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));  
+    // boost::asio::async_read_until(mSocket, pStreamBuf,"##",boost::bind(&onReadUntil,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));
 }
 
 void Socket::async_send(boost::asio::mutable_buffer mData) {
