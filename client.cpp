@@ -109,12 +109,12 @@ int main(int argc, char** argv)
     const char* vin = "0123456789ABCDEF";
     memcpy(header.vin, vin, 17);
     header.encrypType = 0x01;
-    header.dataLength = 5;
+    char* c = "abcde34850idfuoi83485okdjvcxjkoisaduf805845924059852049";
+    header.dataLength = strlen(c);
     Message msg;
     msg.setHeader(header);
-    char* c = "abcde";
     msg.setData(reinterpret_cast<uint8_t *>(c));
-    (void)msg.calBCC();
+    (void)msg.setBCC(msg.calBCC());
     msg.display();
     std::unique_ptr<uint8_t[]> ptr = msg.deserialize();
     char* s = reinterpret_cast<char *>(ptr.get());

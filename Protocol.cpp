@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <ctime>
 #include <sys/time.h>
+#include  <iomanip>
 
 Message::Message()
 {
@@ -32,15 +33,23 @@ void Message::setData(const uint8_t* pBuf)
 }
 uint8_t Message::calBCC()
 {
-    uint8_t* pHeader = (uint8_t*)&mHeader;
     uint8_t temp;
-    for(int i = 0; i<24; i++ ) {
-        temp ^= *(pHeader + i);
+    // uint8_t* pHeader = (uint8_t*)&mHeader;
+    // for(int i = 0; i<24; i++ ) {
+    //     std::cout << std::setfill('0') << std::setw(2) << std::hex << (uint16_t)*(pHeader + i);
+    //     temp ^= *(pHeader + i);
+    // }
+    // for(auto &i:data) {
+    //     std::cout << std::setfill('0') << std::setw(2) << std::hex << (uint16_t)i;
+    //     temp ^= i;
+    // }
+    std::unique_ptr<uint8_t[]> ptr = deserialize();
+    uint8_t* p = ptr.get();
+    for(int i=0; i < getMessageLength() - 1; i++) {
+        std::cout << std::setfill('0') << std::setw(2) << std::hex << (uint16_t)*(p + i);
+        temp ^= *(p + i);
     }
-    for(auto &i:data) {
-        temp ^= i;
-    }
-    mBCC = temp;
+    std::cout<<std::endl<<"BCC: "<<std::hex<<(uint16_t)temp<<std::endl;
     return temp;
 }
 void Message::setBCC(const uint8_t bcc)

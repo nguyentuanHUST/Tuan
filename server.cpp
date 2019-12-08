@@ -136,7 +136,7 @@ void Server::myCommHandler::onReceive(uint8_t* pData, uint32_t len, int id)
                 case 0x01: 
                     std::cout << "0x01 msg" << std::endl;
                     msg.getHeader().responseSign = 0x01;
-                    msg.calBCC();
+                    msg.setBCC(msg.calBCC());
                     if(mApp.mode == 0) {
                         msg.print("Send.txt");
                         socket->async_send(boost::asio::buffer(msg.deserialize().get(), msg.getMessageLength()));
